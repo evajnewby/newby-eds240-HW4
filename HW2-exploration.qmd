@@ -1,0 +1,98 @@
+---
+title: "HW 2 - Turtles"
+subtitle: "Part 2: Data wrangling & exploratory data viz using your chosen data"
+description: "Due Tue 02/04/2025"
+author: "Eva Newby"
+toc: true
+warning: false
+message: false 
+eval: true
+echo: true
+format:
+  html:
+    embed-resources: true
+editor_options: 
+  chunk_output_type: console
+---
+```{r}
+# Load libraries
+library(tidyverse)
+library(here)
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(ggspatial)
+library(prettymapr)
+```
+
+## Read in Data
+```{r}
+# Set the SHAPE_RESTORE_SHX config option
+Sys.setenv("SHAPE_RESTORE_SHX" = "YES")
+
+# Read the shapefile
+shapefile_path <- "C:/MEDS/EDS240-dataviz/Assignments/newby-eds240-HW4/data/nestingbeaches_GCB.shp"
+turtles <- st_read(shapefile_path) %>% 
+    janitor::clean_names()
+```
+
+## Exploratory Data Analysis
+```{r}
+# Check CRS
+st_crs(turtles)
+
+# Unique Countries
+unique(turtles$country)
+```
+
+## Clean and Wrangle Data
+```{r}
+# Get the bounding box for turtles
+bbox <- st_bbox(turtles)
+```
+
+## Exploratory Data Viz 1
+```{r}
+# View the sites
+ggplot()+
+    annotation_map_tile()+
+    geom_sf(data = turtles, color = "#32936F")+
+    # add bounding box
+    geom_rect(aes(xmin = bbox["xmin"], 
+                  xmax = bbox["xmax"], 
+                  ymin = bbox["ymin"], 
+                  ymax = bbox["ymax"]),
+              fill = NA) +
+    coord_sf()+ # Change to Cartesian coordinates
+    theme_void()
+    
+```
+
+## Exploratory Data Viz 2
+```{r}
+# Mann-kendall histogram
+turtles %>% 
+    ggplot(aes(x = mann_kendal, fill = country))+
+    geom_histogram()+
+    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends")
+
+```
+
+## Exploratory Data Viz 3
+```{r}
+# 
+
+```
+
+## Data Questions
+
+1. What have you learned about your data? Have any potentially interesting patterns emerged?
+
+No .shx file! Dealing with vector data. 
+
+2. In HW #1, you outlined some questions that you wanted to answer using these data. Have you made any strides towards answering those questions? If yes, how so? If no, what next steps do you need to take (e.g. I need to create X plot type, I still need to track down Y data, I need to restructure existing data so that you can visualize it in Z ways, etc.)?
+
+
+3. What challenges do you foresee encountering with your data? These can be data wrangling and / or visualization challenges.
+
+
