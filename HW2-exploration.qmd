@@ -25,7 +25,7 @@ library(ggspatial)
 library(prettymapr)
 ```
 
-## Read in Data
+## Read in Turtle Nesting Data
 ```{r}
 # Set the SHAPE_RESTORE_SHX config option
 Sys.setenv("SHAPE_RESTORE_SHX" = "YES")
@@ -53,7 +53,7 @@ bbox <- st_bbox(turtles)
 
 ## Exploratory Data Viz 1
 ```{r}
-# View the sites
+# View the nesting sites on a general basemap
 ggplot()+
     annotation_map_tile()+
     geom_sf(data = turtles, color = "#32936F")+
@@ -64,35 +64,48 @@ ggplot()+
                   ymax = bbox["ymax"]),
               fill = NA) +
     coord_sf()+ # Change to Cartesian coordinates
-    theme_void()
+    theme_void()+
+    labs(title = "Turtle Nesting Locations (in green)")
     
 ```
 
 ## Exploratory Data Viz 2
 ```{r}
-# Mann-kendall histogram
+# Mann-kendall plot
 turtles %>% 
-    ggplot(aes(x = mann_kendal, fill = country))+
-    geom_histogram()+
-    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends")
+    ggplot(aes(x = mann_kendal, y = country, color = country, alpha = 0.5))+
+    geom_point()+
+    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends")+
+    theme_minimal()
 
 ```
 
 ## Exploratory Data Viz 3
 ```{r}
-# 
-
+# Bar chart of countries represented
+turtles %>% 
+    ggplot(aes(x = fct_infreq(country), na.rm = TRUE))+
+    geom_bar()+
+    coord_flip()+
+    labs(x = "Country Name",
+         y = "Number of Nests",
+         title = "Turtle Nesting Count by Country")+
+    theme_minimal()
+    
 ```
 
 ## Data Questions
 
 1. What have you learned about your data? Have any potentially interesting patterns emerged?
 
-No .shx file! Dealing with vector data. 
+- I learned in the data loading section that there was no .shx file provided, which meant that I needed to do some googling to figure out how to resolve this. 
+- The turtle data is vector data. 
+- In looking at the first exploratory data viz, it appears that the USA and Brazil have the highest amount of nests, but it is actually cabo verde and oman (as represented by viz 3)
 
 2. In HW #1, you outlined some questions that you wanted to answer using these data. Have you made any strides towards answering those questions? If yes, how so? If no, what next steps do you need to take (e.g. I need to create X plot type, I still need to track down Y data, I need to restructure existing data so that you can visualize it in Z ways, etc.)?
 
+I described that I was interested in linking nesting sites to ocean warming and/or potentially behavioral data during a turtle's "lost years". I found a dataset for the lost years, but still need to track down a dataset for the warming data. 
 
 3. What challenges do you foresee encountering with your data? These can be data wrangling and / or visualization challenges.
 
-
+Finding data that can be joined with the existing turtle data has already proven to be a challenge. I am open to suggestions for finding ocean temperature warming data, and will likely end up in office hours soon for assistance.
