@@ -53,7 +53,7 @@ bbox <- st_bbox(turtles)
 
 ## Exploratory Data Viz 1
 ```{r}
-# View the nesting sites on a general basemap
+# View the nesting sites on a general basemap. interactive worldmap? geofacet package?
 ggplot()+
     annotation_map_tile()+
     geom_sf(data = turtles, color = "#32936F")+
@@ -82,15 +82,25 @@ turtles %>%
 
 ## Exploratory Data Viz 3
 ```{r}
-# Bar chart of countries represented
+# Bar chart of countries represented, could this number be average?
 turtles %>% 
-    ggplot(aes(x = fct_infreq(country), na.rm = TRUE))+
-    geom_bar()+
+    ggplot(aes(x = fct_rev(fct_infreq(country)), 
+               na.rm = TRUE))+
+    geom_bar(fill = '#438D80')+
+    geom_text(stat = 'count', 
+              aes(label=after_stat(count)),
+              hjust = -0.1,
+              size = 4)+
     coord_flip()+
-    labs(x = "Country Name",
+    labs(x = "",
          y = "Number of Nests",
-         title = "Turtle Nesting Count by Country")+
-    theme_minimal()
+         title = "Loggerhead Turtle Nesting Count by Country (1979 - 2023)")+
+    theme_minimal()+
+    theme(
+        panel.grid.major.y = element_blank(),
+         axis.text.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5)
+        )
     
 ```
 
