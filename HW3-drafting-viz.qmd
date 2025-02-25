@@ -1,0 +1,348 @@
+---
+title: "HW 3 - Turtles"
+subtitle: "Part 3 - Drafting Viz"
+description: "Due Tue 02/25/2025"
+author: "Eva Newby"
+toc: true
+warning: false
+message: false 
+eval: true
+echo: true
+format:
+  html:
+    embed-resources: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+# Load libraries
+library(tidyverse)
+library(here)
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(ggspatial)
+library(prettymapr)
+library(rnaturalearth)
+library(rnaturalearthdata)
+```
+
+## Question 1: Which option Do you plan to pursue?
+
+```         
+I still plan to pursue option 1. I still like the idea of creating three different visualizations that will all work together towards one message or theme.
+```
+
+## Question 2: Re-state your questions - has this changed at all since HW 1?
+
+    ' In this study, we examine the relationship between temperature trends and loggerhead turtle nesting activity over the past four decades. '
+    
+
+## Question 3: Explain which variables from your dataset(s) you will use to answer your question - and how.
+
+    
+
+## Question 4: Find at least two data visualizations that you could (potentially) borrow / adapt pieces from. Link to them or download and embed them into your .qmd file, and explain which elements you might borrow (e.g. the graphic form, legend design, layout, etc.).
+
+![](turtleviz1.jpeg)
+    What I like: I want to re-create the zoomed in map on the regions specified in the paper (eg: south pacific, caribbean, etc.) I also find the colors to be very intuitive.  
+
+
+
+![](turtleviz2.jpeg)
+    What I like: I like this graphic form and the order of the visualizations. I'd like to do something similar with the background being the ocean. I alsdo like the line chart, but I do feel that this viz is displaying too many things in one picture. 
+    
+## Question 5: Hand-draw your anticipated visualizations.
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-align: "center"
+#| out-width: "100%"
+#| fig-alt: "Alt text here"
+
+
+# knitr::include_graphics("path/to/image")
+```
+
+## Question 6: Mock-up of hand-drawn visualizations
+
+### Read in Turtle Nesting Data
+
+```{r}
+# Set the SHAPE_RESTORE_SHX config option
+Sys.setenv("SHAPE_RESTORE_SHX" = "YES")
+
+# Read the shapefile
+shapefile_path <- "C:/MEDS/EDS240-dataviz/Assignments/newby-eds240-HW4/data/nestingbeaches_GCB.shp"
+turtles <- st_read(shapefile_path) %>% 
+    janitor::clean_names()
+```
+
+### Exploratory Data Analysis
+
+```{r}
+# Check CRS
+st_crs(turtles)
+
+# Unique Countries
+unique(turtles$country)
+```
+
+### Clean and Wrangle Data
+
+```{r}
+# Get the bounding box for turtles
+bbox <- st_bbox(turtles)
+```
+
+```{r}
+# Assume data into regional names
+turtles <- turtles %>% 
+    mutate(region = case_when(rmu == 1 ~ "Caribbean and Gulf of Mexico",
+                              rmu == 2 ~ "Southwest Atlantic",
+                              rmu == 3 ~ "Southeast Atlantic",
+                              rmu == 4 ~ "Mediterranean",
+                              rmu == 5 ~ "Arabian",
+                              rmu == 6 ~ "Western Indian",
+                              rmu == 8 ~ "Eastern Indian",
+                              rmu == 9 ~ "Western Pacific",
+                              TRUE ~ "Unknown"))
+
+# Set bounding boxes for each region, will need to adjust as needed
+bbox_carib <- st_bbox(c(xmin = -98, ymin = 10, xmax = -60, ymax = 35), crs = st_crs(turtles))
+                      
+bbox_swat <- st_bbox(c(xmin = -80, ymin = -40, xmax = -30, ymax = 10), crs = st_crs(turtles))
+
+bbox_seat <- st_bbox(c(xmin = -50, ymin = 0, xmax = 0, ymax = 40), crs = st_crs(turtles))
+
+bbox_medit <- st_bbox(c(xmin = -10, ymin = 30, xmax = 40, ymax = 45), crs = st_crs(turtles))
+
+bbox_arab <- st_bbox(c(xmin = 40, ymin = 10, xmax = 70, ymax = 30), crs = st_crs(turtles))
+
+bbox_win <- st_bbox(c(xmin = 40, ymin = -20, xmax = 80, ymax = 10), crs = st_crs(turtles))
+
+bbox_ein <- st_bbox(c(xmin = 80, ymin = -20, xmax = 110, ymax = 10), crs = st_crs(turtles))
+
+bbox_wpa <- st_bbox(c(xmin = 110, ymin = -10, xmax = 150, ymax = 30), crs = st_crs(turtles))
+
+# Save as list for easier access
+bbox_list <- list(  "Caribbean and Gulf of Mexico" = bbox_carib,
+                    "Southwest Atlantic"            = bbox_swat,
+                    "Southeast Atlantic"            = bbox_seat,
+                    "Mediterranean"                 = bbox_medit,
+                    "Arabian"                       = bbox_arab,
+                    "Western Indian"                = bbox_win,
+                    "Eastern Indian"                = bbox_ein,
+                    "Western Pacific"               = bbox_wpa)
+
+# Add a new column so each entry has an assigned bbox
+turtles <- turtles %>% 
+    rowwise() %>% 
+    mutate(bbox = list(bbox_list[[region]])) %>% 
+    ungroup()
+```
+
+### Exploratory Data Viz 1
+
+```{r}
+# Q1: Where are sea turtles nesting?
+# View the nesting sites on a general basemap. interactive worldmap? geofacet package?
+# Shadow the countries that have turtle nests. 
+# Illuminate the beach locations in another color
+overview_map <- ggplot()+
+    annotation_map_tile()+
+    geom_sf(data = turtles, color = '#438D80')+
+    # add bounding box
+    geom_rect(aes(xmin = bbox["xmin"], 
+                  xmax = bbox["xmax"], 
+                  ymin = bbox["ymin"], 
+                  ymax = bbox["ymax"]),
+              fill = NA) +
+    coord_sf()+ # Change to Cartesian coordinates
+    theme_void()+
+    labs(title = "Turtle Nesting Locations (in green)")
+
+overview_map
+    
+```
+
+```{r}
+# NEED HELP HERE
+# Experimental caribbean map
+# Get a world map as an sf object
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# bbox is bbox_carib
+caribbean_map <- st_crop(world, bbox_carib)
+
+# Check CRS for both datasets
+st_crs(world) == st_crs(turtles)
+
+
+turtles_in_bbox <- st_crop(turtles, bbox_carib)
+
+# Check if there are any points left
+nrow(turtles_in_bbox)
+
+# fix invalid geometries
+library(lwgeom)
+turtles <- st_make_valid(turtles)
+
+```
+
+```{r}
+# Experimental caribbean map
+
+# Create the ggplot map
+carib_map <- ggplot() +
+    geom_sf(data = turtles, color = '#438D80', size = 2)+
+    geom_sf(data = caribbean_map, fill = "lightblue") +
+    coord_sf(xlim = c(bbox_carib["xmin"], bbox_carib["xmax"]),
+           ylim = c(bbox_carib["ymin"], bbox_carib["ymax"]),
+           expand = FALSE) +
+    labs(title = "Caribbean and Gulf of Mexico",
+       subtitle = "Using rnaturalearth and ggplot2",
+       x = "Longitude", y = "Latitude") +
+    theme_minimal()
+
+carib_map
+```
+
+### Exploratory Data Viz 2
+
+```{r}
+# Q2: Densikty of countries represented 
+# Bar chart of countries represented, could this number be average?
+turtles %>% 
+    ggplot(aes(x = fct_rev(fct_infreq(country)), 
+               na.rm = TRUE))+
+    geom_bar(fill = '#438D80')+
+    geom_text(stat = 'count', 
+              aes(label=after_stat(count)),
+              hjust = -0.1,
+              size = 4)+
+    coord_flip()+
+    labs(x = "",
+         y = "Number of Nests",
+         title = " Average Loggerhead Turtle Nesting Count by Country (per year 1979 - 2023)")+
+    theme_minimal()+
+    theme(
+        panel.grid.major.y = element_blank(),
+         axis.text.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5)
+        )
+
+# per region
+turtles %>% 
+    ggplot(aes(x = fct_rev(fct_infreq(region)), 
+               na.rm = TRUE))+
+    geom_bar(fill = '#438D80')+
+    geom_text(stat = 'count', 
+              aes(label=after_stat(count)),
+              hjust = -0.1,
+              size = 4)+
+    coord_flip()+
+    labs(x = "",
+         y = "Number of Nests",
+         title = " Average Loggerhead Turtle Nesting Count by World Region (per year 1979 - 2023)")+
+    theme_minimal()+
+    theme(
+        panel.grid.major.y = element_blank(),
+         axis.text.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5))
+
+    
+```
+
+### Exploratory Data Viz 3
+
+```{r}
+# Q3: Which regions that have nests have the highest variation in their mann-kendall slopes?
+# Mann-kendall reveals change in their nesting amounts over time. 
+    
+# ---------------------- Line plots -----------------------------
+# Mann-kendall plot per country line
+turtles %>% 
+    ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
+    geom_line(size = 4,
+              color = '#438D80')+
+    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
+    theme_minimal()+
+    theme(legend.position = 'none')
+
+# Mann-kendall plot per region line
+turtles %>% 
+    ggplot(aes(x = mann_kendal, y = region, alpha = 0.2))+
+    geom_line(size = 4,
+              color = '#438D80')+
+    labs(title = 'Mann-Kendall slope of loggerhead turtle nesting trends by region',
+         x = "Mann-Kendall slope",
+         y = "")+
+    theme_minimal()+
+    theme(legend.position = 'none')
+
+# ---------------------- Point plots -----------------------------
+# per country, point
+turtles %>% 
+    ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
+    geom_point(size = 4,
+               color = '#438D80')+
+    geom_line(size = 2,
+              color = '#438D80')+
+    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
+    theme_minimal()+
+    theme(legend.position = 'none')
+
+# Mann-kendall plot per region point
+turtles %>% 
+    ggplot(aes(x = mann_kendal, y = region, alpha = 0.2))+
+     geom_point(size = 4,
+               color = '#438D80')+
+    labs(title = 'Mann-Kendall slope of loggerhead turtle nesting trends by region',
+         x = "Mann-Kendall slope",
+         y = "")+
+    theme_minimal()+
+    theme(legend.position = 'none')
+
+# ---------------------- Point and line Combo plots -----------------------------
+# per country
+turtles %>% 
+    ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
+    geom_point(size = 4,
+               color = '#438D80')+
+    geom_line(size = 2,
+              color = '#438D80')+
+    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
+    theme_minimal()+
+    theme(legend.position = 'none')
+
+# Mann-kendall plot per region
+turtles %>% 
+    ggplot(aes(x = mann_kendal, y = region, alpha = 0.2))+
+    geom_point(size = 4,
+               color = '#438D80')+
+    geom_line(size = 2,
+              color = '#438D80')+
+    labs(title = 'Change of loggerhead turtle nesting trends by region',
+         x = "Mann-Kendall Slope (number above 0 = increase in sea turtle nesting sites over time)",
+         y = "")+
+    theme_minimal()+
+    theme(legend.position = 'none')
+
+
+```
+Excerpt about mann-kendall from paper: 'The Mann–Kendall tests showed a significant increase in nest count trends at multiple sites (Table 1; Figure 1). Sharp increases (Mann–Kendall >0.70) were observed in the Caribbean (Grand Cayman), Southwest Atlantic (Sergipe, Bahia), Southeast Atlantic (Sal, Maio), Mediterranean (West Cyprus, Dalyan, Sicily) and Western Indian (Kwazulu). In comparison, significant positive but less sharp increases (Mann–Kendall <0.70) were found in the Caribbean and Gulf of Mexico (Quintana Roo, Tankah, South Carolina, Northeast Florida, Sanibel, Sarasota), Southwest Atlantic (Espírito Santo), Southeast Atlantic (Santa Luzia, Boa Vista, João Barrosa), Mediterranean (North Cyprus, Çirali), Western Indian (Malongane) and Western Pacific (Yakushima). Only one site significantly decreased the number of nests over time: Masirah Island in Oman (Arabian Sea), with a significant Mann–Kendall slope of −0.78. The remaining regions had no significant pattern and thus were considered stable: East Florida, Panhandle and West Florida, Rio de Janeiro, Zakynthos and Ningaloo.'
+
+## Question 7a: What challenges did you encounter or anticipate encountering as you continue to build / iterate on your visualizations in R? If you struggled with mocking up any of your three visualizations (from #6, above), describe those challenges here.
+
+## Question 7b: What ggplot extension tools / packages do you need to use to build your visualizations? Are there any that we haven’t covered in class that you’ll be learning how to use for your visualizations?
+
+## Question 7c: What feedback do you need from the instructional team and / or your peers to ensure that your intended message is clear?
+
+    Should I do it by country or by region? 
+
+## Citation:
+
+'Sousa-Guedes, Diana; Campos, João C.; Bessa, Filipa et al. (2025). The effects of warming on loggerhead turtle nesting counts \[Dataset\]. Dryad. https://doi.org/10.5061/dryad.b8gtht7n5'
