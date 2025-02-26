@@ -30,18 +30,19 @@ library(rnaturalearthdata)
 
 ## Question 1: Which option Do you plan to pursue?
 
-```         
-I still plan to pursue option 1. I still like the idea of creating three different visualizations that will all work together towards one message or theme.
-```
+       I still plan to pursue option 1. I still like the idea of creating three different visualizations that will all work together towards one message or theme.
+
 
 ## Question 2: Re-state your questions - has this changed at all since HW 1?
 
-    ' In this study, we examine the relationship between temperature trends and loggerhead turtle nesting activity over the past four decades. '
+    What is the change in Loggerhead sea turtle nesting trends by world region? The original question was: What is the relationship between temperature trends and loggerhead turtle nesting activity over the past four decades? I needed to edit this question, as raw year and ocean temperature data was not provided in the dataset, and so I am pivoting to a broader question. My hope is that viewers see the viz's and ask question as to why there is change. 
     
 
 ## Question 3: Explain which variables from your dataset(s) you will use to answer your question - and how.
 
-    
+    Mann-Kendall: This number quantifies how much change in loggerhead turtle nesting (increase or decrease) a beach or region experienced. Zero = no change, below zero = a decrease in nesting, above zero = an increase in nesting. 
+    rmu and country: Regional Management Unit, this number was used to assign countries to regions. I created a regions column from the data from the rmu and country column.
+    GEOMETRY: Shapefile geometry for each beach/stretch of beach where nests were found. 
 
 ## Question 4: Find at least two data visualizations that you could (potentially) borrow / adapt pieces from. Link to them or download and embed them into your .qmd file, and explain which elements you might borrow (e.g. the graphic form, legend design, layout, etc.).
 
@@ -110,7 +111,7 @@ turtles <- turtles %>%
                               rmu == 9 ~ "Western Pacific",
                               TRUE ~ "Unknown"))
 
-# Set bounding boxes for each region, will need to adjust as needed
+# Set bounding boxes for each region, will need to adjust for each region
 bbox_carib <- st_bbox(c(xmin = -98, ymin = 10, xmax = -60, ymax = 35), crs = st_crs(turtles))
                       
 bbox_swat <- st_bbox(c(xmin = -80, ymin = -40, xmax = -30, ymax = 10), crs = st_crs(turtles))
@@ -144,10 +145,11 @@ turtles <- turtles %>%
     ungroup()
 ```
 
-### Exploratory Data Viz 1
+### Data Viz 1 - World Map
 
 ```{r}
-# Q1: Where are sea turtles nesting?
+# Q1: Where are sea turtles nesting? ---------------------------------------------------------------------------------
+
 # View the nesting sites on a general basemap. interactive worldmap? geofacet package?
 # Shadow the countries that have turtle nests. 
 # Illuminate the beach locations in another color
@@ -210,11 +212,12 @@ carib_map <- ggplot() +
 carib_map
 ```
 
-### Exploratory Data Viz 2
+### Data Viz 2 - Bar Chart
 
 ```{r}
-# Q2: Densikty of countries represented 
-# Bar chart of countries represented, could this number be average?
+# Q2: Countries represented and their average nest count per year. ------------------------------------------------------------------------------- 
+
+# Bar chart of countries represented, double check that this number is an average.
 turtles %>% 
     ggplot(aes(x = fct_rev(fct_infreq(country)), 
                na.rm = TRUE))+
@@ -256,92 +259,105 @@ turtles %>%
     
 ```
 
-### Exploratory Data Viz 3
+### Exploratory Data Viz 3 - Point and Line Chart
 
 ```{r}
-# Q3: Which regions that have nests have the highest variation in their mann-kendall slopes?
+# Q3: Which regions that have nests have the highest variation in their mann-kendall slopes? ------------------------------------------------------
+
+
 # Mann-kendall reveals change in their nesting amounts over time. 
     
-# ---------------------- Line plots -----------------------------
-# Mann-kendall plot per country line
-turtles %>% 
-    ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
-    geom_line(size = 4,
-              color = '#438D80')+
-    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
-    theme_minimal()+
-    theme(legend.position = 'none')
+# # ---------------------- Line plots -----------------------------
+# # Mann-kendall plot per country line
+# turtles %>% 
+#     ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
+#     geom_line(size = 4,
+#               color = '#438D80')+
+#     labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
+#     theme_minimal()+
+#     theme(legend.position = 'none')
+# 
+# # Mann-kendall plot per region line
+# turtles %>% 
+#     ggplot(aes(x = mann_kendal, y = region, alpha = 0.2))+
+#     geom_line(size = 4,
+#               color = '#438D80')+
+#     labs(title = 'Mann-Kendall slope of loggerhead turtle nesting trends by region',
+#          x = "Mann-Kendall slope",
+#          y = "")+
+#     theme_minimal()+
+#     theme(legend.position = 'none')
+# 
+# # ---------------------- Point plots -----------------------------
+# # per country, point
+# turtles %>% 
+#     ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
+#     geom_point(size = 4,
+#                color = '#438D80')+
+#     geom_line(size = 2,
+#               color = '#438D80')+
+#     labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
+#     theme_minimal()+
+#     theme(legend.position = 'none')
+# 
+# # Mann-kendall plot per region point
+# turtles %>% 
+#     ggplot(aes(x = mann_kendal, y = region, alpha = 0.2))+
+#      geom_point(size = 4,
+#                color = '#438D80')+
+#     labs(title = 'Mann-Kendall slope of loggerhead turtle nesting trends by region',
+#          x = "Mann-Kendall slope",
+#          y = "")+
+#     theme_minimal()+
+#     theme(legend.position = 'none')
 
-# Mann-kendall plot per region line
-turtles %>% 
-    ggplot(aes(x = mann_kendal, y = region, alpha = 0.2))+
-    geom_line(size = 4,
-              color = '#438D80')+
-    labs(title = 'Mann-Kendall slope of loggerhead turtle nesting trends by region',
-         x = "Mann-Kendall slope",
-         y = "")+
-    theme_minimal()+
-    theme(legend.position = 'none')
 
-# ---------------------- Point plots -----------------------------
-# per country, point
-turtles %>% 
-    ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
-    geom_point(size = 4,
-               color = '#438D80')+
-    geom_line(size = 2,
-              color = '#438D80')+
-    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
-    theme_minimal()+
-    theme(legend.position = 'none')
 
-# Mann-kendall plot per region point
-turtles %>% 
-    ggplot(aes(x = mann_kendal, y = region, alpha = 0.2))+
-     geom_point(size = 4,
-               color = '#438D80')+
-    labs(title = 'Mann-Kendall slope of loggerhead turtle nesting trends by region',
-         x = "Mann-Kendall slope",
-         y = "")+
-    theme_minimal()+
-    theme(legend.position = 'none')
 
 # ---------------------- Point and line Combo plots -----------------------------
 # per country
-turtles %>% 
-    ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
-    geom_point(size = 4,
-               color = '#438D80')+
-    geom_line(size = 2,
-              color = '#438D80')+
-    labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
-    theme_minimal()+
-    theme(legend.position = 'none')
+# 
+# turtles %>% 
+#     ggplot(aes(x = mann_kendal, y = country, alpha = 0.5))+
+#     geom_point(size = 4,
+#                color = '#438D80')+
+#     geom_line(size = 2,
+#               color = '#438D80')+
+#     labs(x = "Mann-Kendall slope of loggerhead turtle nesting trends by country")+
+#     theme_minimal()+
+#     theme(legend.position = 'none')
+
+
 
 # Mann-kendall plot per region
 turtles %>% 
-    ggplot(aes(x = mann_kendal, y = region, alpha = 0.2))+
-    geom_point(size = 4,
+    ggplot(aes(x = mann_kendal, y = fct_rev(fct_infreq(region)), alpha = 0.2))+ # re-order to match the same order as the bar graph
+    geom_point(size = 4, # maybe find a little turtle guy instead of a round point?
                color = '#438D80')+
     geom_line(size = 2,
-              color = '#438D80')+
-    labs(title = 'Change of loggerhead turtle nesting trends by region',
-         x = "Mann-Kendall Slope (number above 0 = increase in sea turtle nesting sites over time)",
+              color = '#438D80')+ # I want to add a gradient to the line to indicate change. I'm thinking color scale red to green?
+    labs(title = 'Change in Loggerhead Turtle Nesting Trends by Region (1979 - 2023)',
+         x = " Change in Loggerhead Turtle Nesting Over Time (Mann-Kendall Slope)",
          y = "")+
     theme_minimal()+
-    theme(legend.position = 'none')
+    theme(legend.position = 'none') 
 
 
 ```
-Excerpt about mann-kendall from paper: 'The Mann–Kendall tests showed a significant increase in nest count trends at multiple sites (Table 1; Figure 1). Sharp increases (Mann–Kendall >0.70) were observed in the Caribbean (Grand Cayman), Southwest Atlantic (Sergipe, Bahia), Southeast Atlantic (Sal, Maio), Mediterranean (West Cyprus, Dalyan, Sicily) and Western Indian (Kwazulu). In comparison, significant positive but less sharp increases (Mann–Kendall <0.70) were found in the Caribbean and Gulf of Mexico (Quintana Roo, Tankah, South Carolina, Northeast Florida, Sanibel, Sarasota), Southwest Atlantic (Espírito Santo), Southeast Atlantic (Santa Luzia, Boa Vista, João Barrosa), Mediterranean (North Cyprus, Çirali), Western Indian (Malongane) and Western Pacific (Yakushima). Only one site significantly decreased the number of nests over time: Masirah Island in Oman (Arabian Sea), with a significant Mann–Kendall slope of −0.78. The remaining regions had no significant pattern and thus were considered stable: East Florida, Panhandle and West Florida, Rio de Janeiro, Zakynthos and Ningaloo.'
 
 ## Question 7a: What challenges did you encounter or anticipate encountering as you continue to build / iterate on your visualizations in R? If you struggled with mocking up any of your three visualizations (from #6, above), describe those challenges here.
 
+    Viz 1: I didn't anticipate as many issues with defining the bboxes for viz 1. Going through by hand to define them all is a bit of a pian, so I'm all ears to finding an easier way to do this. Additionally, some of my data keeps disappearing so I am actively troubleshooting that. 
+    Viz 2: It feels a little boring, so I'm excited to add more thematic elements to make it a bit more fun looking. 
+    Viz 3: It is a challenge to define what the mann-kendall slope is in easy terms for this project. I so badly wish the dataset included years and ocean temperatures, but all of that data is included in the mann-kendall calculation (the code for the calculation was not provided to me). I do think that it is interesting to see the mann-kendall slope change and I am very open to feedback for how to make this easier to understand. 
+
 ## Question 7b: What ggplot extension tools / packages do you need to use to build your visualizations? Are there any that we haven’t covered in class that you’ll be learning how to use for your visualizations?
+    
+    I'd like to explore more world map package options from ggplot and sf. There's a lot of cool ways to display geospatial data and I want to explore that more. One package I might use is the `geofacet` package. I'm very open to suggestions on this. 
 
 ## Question 7c: What feedback do you need from the instructional team and / or your peers to ensure that your intended message is clear?
 
-    Should I do it by country or by region? 
+    Something I was considering is: should I mock up my visualizations by country or by region? Feedback from my learning partners in discussion convinced me to do it by region instead of by country, but I'm keeping the code here just incase (commented it out). I included more areas I'd like to receive feedback in question 7a.
 
 ## Citation:
 
