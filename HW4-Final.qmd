@@ -31,9 +31,10 @@ library(forcats)
 library(ggimage)
 library(viridis)
 library(viridisLite)
+library(showtext)
 ```
 
-### Read in Turtle Nesting Data
+### Read in Turtle Nesting Data and Font Data
 
 ```{r}
 # Set the SHAPE_RESTORE_SHX config option
@@ -43,6 +44,12 @@ Sys.setenv("SHAPE_RESTORE_SHX" = "YES")
 shapefile_path <- "C:/MEDS/EDS240-dataviz/Assignments/newby-eds240-HW4/data/nestingbeaches_GCB.shp"
 turtles <- st_read(shapefile_path) %>% 
     janitor::clean_names()
+
+# Font options from google
+font_add_google("Lora", "lora") 
+font_add_google("Quicksand", "quicksand") 
+font_add_google("Gochi Hand", "gochi")
+showtext_auto()
 ```
 
 ### Exploratory Data Analysis
@@ -70,37 +77,21 @@ turtles <- turtles %>%
                               rmu == 3 ~ "Southeast Atlantic",
                               rmu == 4 ~ "Mediterranean",
                               rmu == 5 ~ "Arabian",
-                              rmu == 6 ~ "Western Indian",
                               rmu == 8 ~ "Eastern Indian",
-                              rmu == 9 ~ "Western Pacific",
-                              TRUE ~ "Unknown"))
+                              TRUE ~ "Unknown")) %>% 
+    filter(region %in% c('Caribbean and Gulf of Mexico', 'Southeast Atlantic', 'Mediterranean', 'Arabian', 'Eastern Indian', 'Southwest Atlantic'))
 
 # Set bounding boxes for each region, will need to adjust for each region
 bbox_carib <- st_bbox(c(xmin = -98, ymin = 10, xmax = -60, ymax = 35), crs = st_crs(turtles))
-                      
-bbox_swat <- st_bbox(c(xmin = -80, ymin = -40, xmax = -30, ymax = 10), crs = st_crs(turtles))
-
+                     
 bbox_seat <- st_bbox(c(xmin = -50, ymin = 0, xmax = 0, ymax = 40), crs = st_crs(turtles))
 
 bbox_medit <- st_bbox(c(xmin = -10, ymin = 30, xmax = 40, ymax = 45), crs = st_crs(turtles))
 
-bbox_arab <- st_bbox(c(xmin = 40, ymin = 10, xmax = 70, ymax = 30), crs = st_crs(turtles))
-
-bbox_win <- st_bbox(c(xmin = 40, ymin = -20, xmax = 80, ymax = 10), crs = st_crs(turtles))
-
-bbox_ein <- st_bbox(c(xmin = 80, ymin = -20, xmax = 110, ymax = 10), crs = st_crs(turtles))
-
-bbox_wpa <- st_bbox(c(xmin = 110, ymin = -10, xmax = 150, ymax = 30), crs = st_crs(turtles))
-
 # Save as list for easier access
 bbox_list <- list(  "Caribbean and Gulf of Mexico" = bbox_carib,
-                    "Southwest Atlantic"            = bbox_swat,
                     "Southeast Atlantic"            = bbox_seat,
-                    "Mediterranean"                 = bbox_medit,
-                    "Arabian"                       = bbox_arab,
-                    "Western Indian"                = bbox_win,
-                    "Eastern Indian"                = bbox_ein,
-                    "Western Pacific"               = bbox_wpa)
+                    "Mediterranean"                 = bbox_medit)
 
 # Add a new column so each entry has an assigned bbox
 turtles <- turtles %>% 
@@ -109,7 +100,89 @@ turtles <- turtles %>%
     ungroup()
 ```
 
-### Data Viz 1 - World Map
+
+### Data Viz 1 - Bar Chart (move to 1)
+go back to HW1, look at moving the label text into the bars
+
+
+```{r}
+# Summarize unique nest counts per region
+region_counts <- turtles %>%
+    st_drop_geometry() %>% 
+    group_by(region) %>%
+    summarize(nest_count = n()) %>%  # Count occurrences per region
+    mutate(opacity_val = nest_count / max(nest_count))  # Normalize opacity (0-1)
+
+# Join back to original data (so each region has its unique opacity)
+turtles <- turtles %>%
+    left_join(region_counts, by = "region")
+```
+
+
+```{r}
+# Q2: World regions represented and their average nest count per year. ------------------------------------------------------------------------------- 
+# per region
+
+turtle_bar_plot <- turtles %>% 
+    
+    ggplot(aes(x = fct_rev(fct_infreq(region)),
+               alpha = opacity_val))+
+    
+    geom_bar(fill = '#438D80')+
+    
+    geom_text(stat = 'count', 
+              aes(label=after_stat(count)),
+              hjust = 2,
+              size = 8,
+              color = "black",
+              family = 'quicksand',
+              fontface = "bold")+
+    
+    coord_flip()+
+    
+    geom_text(aes(x = region, y = 0, label = str_to_title(region)), 
+             # family = 'gochi',
+             family = "quicksand",
+            #fontface = "bold",
+            size = 8, 
+            hjust = -0.03,
+            nudge_y = 0.2) +
+    
+    labs(x = " ",
+         y = "Number of Nests",
+         title = " Average Loggerhead Turtle Nesting Counts ... (per year 1979 - 2023)")+
+    
+    theme_void()+
+    
+    theme(
+        # text font
+        text = element_text(family = "quicksand"),
+        panel.grid.major.y = element_blank(),
+        # axis.text.y = element_text(size = 10),
+        plot.title = element_text(hjust = 0.5),
+
+        # Sand colored background:
+        panel.background = element_rect(fill = "#F4E7C5", color = NA),
+        plot.background = element_rect(fill = "#F4E7C5", color = NA),
+        legend.background = element_rect(fill = "#F4E7C5", color = NA),
+        
+        # Remove x and y axis labels
+        axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(), 
+    ) +
+    guides(alpha = "none")
+        
+
+turtle_bar_plot   
+```
+
+### Data Viz 2 - World Map
+Countries in the caribbean/gulf of mexico  and Southeast Atlantic - HIGHLIGHT 
+opacity value for nesting sites. general patterns by country
+3 separate maps (top3 locations from bar chart)
+or just caribb
 
 ```{r}
 # Q1: Where are sea turtles nesting? ---------------------------------------------------------------------------------
@@ -138,32 +211,32 @@ overview_map
 # NEED HELP HERE
 # Experimental caribbean map
 # Get a world map as an sf object
-# world <- ne_countries(scale = "medium", returnclass = "sf")
-# 
-# # Check for any invalid geometries
-# st_is_valid(world)
-# st_is_valid(turtles)
-# 
-# # fix invalid geometries in turtles
-# library(lwgeom)
-# turtles <- st_make_valid(turtles)
-# 
-# # Convert bbox to an sf polygon
-# bbox_carib_sf <- st_as_sfc(bbox_carib)
-# 
-# # Ensure the polygon is valid
-# bbox_carib_sf <- st_make_valid(bbox_carib_sf)
-# 
-# bbox_carib_sf <- st_make_valid(bbox_carib)
-# 
-# # bbox is bbox_carib
-# caribbean_map <- st_crop(world, bbox_carib)
-# 
-# # Check CRS for both datasets
-# st_crs(world) == st_crs(turtles)
-# 
-# 
-# turtles_in_bbox <- st_crop(turtles, bbox_carib)
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Check for any invalid geometries
+st_is_valid(world)
+st_is_valid(turtles)
+
+# fix invalid geometries in turtles
+library(lwgeom)
+turtles <- st_make_valid(turtles)
+
+# Convert bbox to an sf polygon
+bbox_carib_sf <- st_as_sfc(bbox_carib)
+
+# Ensure the polygon is valid
+bbox_carib_sf <- st_make_valid(bbox_carib_sf)
+
+bbox_carib_sf <- st_make_valid(bbox_carib)
+
+# bbox is bbox_carib
+caribbean_map <- st_crop(world, bbox_carib)
+
+# Check CRS for both datasets
+st_crs(world) == st_crs(turtles)
+
+
+turtles_in_bbox <- st_crop(turtles, bbox_carib)
 
 
 ```
@@ -173,8 +246,8 @@ overview_map
 
 # Create the ggplot map
 carib_map <- ggplot() +
+    geom_sf(data = caribbean_map, fill = "lightblue") +
     geom_sf(data = turtles, color = '#438D80', size = 2)+
-    #geom_sf(data = caribbean_map, fill = "lightblue") +
     coord_sf(xlim = c(bbox_carib["xmin"], bbox_carib["xmax"]),
            ylim = c(bbox_carib["ymin"], bbox_carib["ymax"]),
            expand = FALSE) +
@@ -186,97 +259,89 @@ carib_map <- ggplot() +
 carib_map
 ```
 
-### Data Viz 2 - Bar Chart
+### Data Viz 3 - Point and Line Chart
+add in context/annotations
+remove title
 
 ```{r}
-# Q2: Countries represented and their average nest count per year. ------------------------------------------------------------------------------- 
-# per region
-turtles %>% 
-    ggplot(aes(x = fct_rev(fct_infreq(region)), 
-               na.rm = TRUE))+
-    geom_bar(fill = '#438D80')+
-    geom_text(stat = 'count', 
-              aes(label=after_stat(count)),
-              hjust = -0.1,
-              size = 4)+
-    coord_flip()+
-    labs(x = "",
-         y = "Number of Nests",
-         title = " Average Loggerhead Turtle Nesting Count by World Region (per year 1979 - 2023)")+
-    theme_minimal()+
-    theme(
-        panel.grid.major.y = element_blank(),
-         axis.text.y = element_text(size = 10),
-        plot.title = element_text(hjust = 0.5))
+# Add turtle icon
+turtle_hatch <- "turtle-hatch.png"
 
-    
+# add turtle icon to each column that has a unique mann-kendall score value per country
+turtles$image <- ifelse(duplicated(turtles$mann_kendal), NA, turtle_hatch)
+
+# Filter for mann-kendall plot
+mann_kendall_turtles = turtles %>% 
+    filter(region %in% c('Caribbean and Gulf of Mexico', 'Southeast Atlantic'))
+
 ```
 
-### Exploratory Data Viz 3 - Point and Line Chart
-
 ```{r}
-# Q3: Which regions that have nests have the highest variation in their mann-kendall slopes? ------------------------------------------------------
-
-# # Mann-kendall plot per region
-# turtles %>% 
-#     ggplot(aes(x = mann_kendal, 
-#                y = fct_rev(fct_infreq(region)), alpha = 0.2))+ # re-order to match the same order as the bar graph
-#     geom_point(size = 4, # maybe find a little turtle guy instead of a round point?
-#                color = '#438D80')+
-#     geom_line(size = 2,
-#               color = '#438D80')+ # I want to add a gradient to the line to indicate change. I'm thinking color scale red to green?
-#     labs(title = 'Change in Loggerhead Turtle Nesting Trends by Region (1979 - 2023)',
-#          x = " Change in Loggerhead Turtle Nesting Over Time (Mann-Kendall Slope)",
-#          y = "")+
-#     theme_minimal()+
-#     theme(legend.position = 'none') 
+# Just caribbean and gulf of mexico.
+# Q3: Which regions that have nests have the highest variation in their mann-kendal slopes? ------------------------------------------------------
 
 #  Mann-kendall plot per region
-turtle_icon <- "turtle-icon.png"
 
-turtles %>%
+mann_kendall_plot <- mann_kendall_turtles %>%
+    
   ggplot(aes(x = mann_kendal, 
              y = fct_rev(fct_infreq(region)))) +
-  #geom_point(aes(image = turtle_icon), size = 1) + # Use ggimage for turtle icons - this isn't working that well
+    
   geom_line(aes(color = mann_kendal), 
-            size = 2) +  # Gradient color
-  scale_color_gradient2(scale_color_viridis(option = "D")) + # look into why this isn't working
-      #low = "lightblue", mid = "blue", high = "darkblue", midpoint = 0) + 
-  geom_vline(xintercept = 0, color = "black", linetype = "dashed", size = 0.8, alpha = 0.5)+
-  annotate("text", x = max(turtles$mann_kendal), y = 0, label = "No change in Nesting Trends", hjust = 1.2, vjust = -0.5, color = "black")+
-  labs(title = 'Change in Loggerhead Turtle Nesting Trends by Region (1979 - 2023)',
-       x = "Change in Loggerhead Turtle Nesting Over Time (Mann-Kendall Slope)",
+            size = 4) +  
+    
+    # Use ggimage for turtle icons
+  geom_image(aes(image = image), size = 0.06)+
+    
+    # Gradient color and gradient color legend
+  scale_color_gradient2(low = "green", 
+                        mid = "lightblue", 
+                        high = "#438D80", 
+                        midpoint = 0,
+                        guide = guide_colorbar(title = NULL,
+                                               barwidth = 23,
+                                               barheight = 0.5),
+                        breaks = c(-0.5, 0, 0.5),
+                        labels = c("Decrease", "No Change", "Increase")) + 
+    
+    # "No change" h line
+  geom_vline(xintercept = 0, 
+             color = "black", 
+             linetype = "dashed", 
+             size = 0.8, 
+             alpha = 0.5)+
+  annotate("text", x = max(turtles$mann_kendal), 
+           y = 0, 
+           label = "No Change", 
+           hjust = -1, 
+           vjust = -30, # adjust this to move text
+           angle = 90, 
+           color = "black", 
+           size = 3) +
+    
+    # label axes
+  labs(x = "Change in Loggerhead Turtle Nesting Over Time (Mann-Kendall Slope)",
        y = "") +
-  theme_transparent() +
-  theme(legend.position = 'none',
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        # text font
+        text = element_text(family = "quicksand"),
+        
         # Sand colored background:
         panel.background = element_rect(fill = "#F4E7C5", color = NA),
         plot.background = element_rect(fill = "#F4E7C5", color = NA),
-        legend.background = element_rect(fill = "#F4E7C5", color = NA)  
-    )
+        legend.background = element_rect(fill = "#F4E7C5", color = NA),
+        
+       # plot.title = element_text(face = "bold", size = 14),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        
+        # add dot/ turtle icon in the legend
+        
+        
+        # increase plot margin on the right side
+        plot.margin = margin(t = 10, r = 100, b = 10, l = 10)
+    ) 
 
+mann_kendall_plot
 ```
-
-```{r}
-# this chunk is taking foreverrrr to run
-
-ggplot(turtles, aes(x = mann_kendal, 
-                    y = fct_rev(fct_infreq(region)))) +
-    geom_image(aes(image = turtle_icon), 
-               size = 0.5) + # Use your PNG image
-    geom_line(aes(color = mann_kendal), 
-              size = 2) +
-    scale_color_gradient2(low = "green", 
-                          mid = "lightblue", 
-                          high = "blue", 
-                          midpoint = 0) +
-    labs(
-        title = 'Change in Loggerhead Turtle Nesting Trends by Region (1979 - 2023)',
-        x = "Change in Loggerhead Turtle Nesting Over Time (Mann-Kendall Slope)",
-        y = ""
-    ) +
-    theme_minimal() +
-    theme(legend.position = 'none')
-
-```
-
