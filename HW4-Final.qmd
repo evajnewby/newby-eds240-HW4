@@ -32,6 +32,7 @@ library(ggimage)
 library(viridis)
 library(viridisLite)
 library(showtext)
+library(geofacet)
 ```
 
 ### Read in Turtle Nesting Data and Font Data
@@ -52,24 +53,12 @@ font_add_google("Gochi Hand", "gochi")
 showtext_auto()
 ```
 
-### Exploratory Data Analysis
+### Exploratory Data Analysis and Data Wrangling
 
 ```{r}
 # Check CRS
 st_crs(turtles)
 
-# Unique Countries
-unique(turtles$country)
-```
-
-### Clean and Wrangle Data
-
-```{r}
-# Get the bounding box for turtles
-bbox <- st_bbox(turtles)
-```
-
-```{r}
 # Assume data into regional names
 turtles <- turtles %>% 
     mutate(region = case_when(rmu == 1 ~ "Caribbean and Gulf of Mexico",
@@ -80,31 +69,9 @@ turtles <- turtles %>%
                               rmu == 8 ~ "Eastern Indian",
                               TRUE ~ "Unknown")) %>% 
     filter(region %in% c('Caribbean and Gulf of Mexico', 'Southeast Atlantic', 'Mediterranean', 'Arabian', 'Eastern Indian', 'Southwest Atlantic'))
-
-# Set bounding boxes for each region, will need to adjust for each region
-bbox_carib <- st_bbox(c(xmin = -98, ymin = 10, xmax = -60, ymax = 35), crs = st_crs(turtles))
-                     
-bbox_seat <- st_bbox(c(xmin = -50, ymin = 0, xmax = 0, ymax = 40), crs = st_crs(turtles))
-
-bbox_medit <- st_bbox(c(xmin = -10, ymin = 30, xmax = 40, ymax = 45), crs = st_crs(turtles))
-
-# Save as list for easier access
-bbox_list <- list(  "Caribbean and Gulf of Mexico" = bbox_carib,
-                    "Southeast Atlantic"            = bbox_seat,
-                    "Mediterranean"                 = bbox_medit)
-
-# Add a new column so each entry has an assigned bbox
-turtles <- turtles %>% 
-    rowwise() %>% 
-    mutate(bbox = list(bbox_list[[region]])) %>% 
-    ungroup()
 ```
 
-
-### Data Viz 1 - Bar Chart (move to 1)
-go back to HW1, look at moving the label text into the bars
-
-
+### Data Viz 1 - Bar Chart
 ```{r}
 # Summarize unique nest counts per region
 region_counts <- turtles %>%
@@ -144,7 +111,7 @@ turtle_bar_plot <- turtles %>%
              # family = 'gochi',
              family = "quicksand",
             #fontface = "bold",
-            size = 8, 
+            size = 7, 
             hjust = -0.03,
             nudge_y = 0.2) +
     
@@ -181,82 +148,246 @@ turtle_bar_plot
 ### Data Viz 2 - World Map
 Countries in the caribbean/gulf of mexico  and Southeast Atlantic - HIGHLIGHT 
 opacity value for nesting sites. general patterns by country
-3 separate maps (top3 locations from bar chart)
-or just caribb
+3 separate maps (top2 locations from bar chart)
+or just caribbean
+
+# Backup - what countries make up the caribbean/gulf of Mexico?
+
+
+# This is the one!
 
 ```{r}
-# Q1: Where are sea turtles nesting? ---------------------------------------------------------------------------------
+# Q2: Where are sea turtles nesting in the caribbean and gulf of Mexico ? ------------------------------------------------------------------
 
-# View the nesting sites on a general basemap. interactive worldmap? geofacet package?
-# Shadow the countries that have turtle nests. 
-# Illuminate the beach locations in another color
-overview_map <- ggplot()+
-    annotation_map_tile()+
-    geom_sf(data = turtles, color = '#438D80')+
-    # add bounding box
-    geom_rect(aes(xmin = bbox["xmin"], 
-                  xmax = bbox["xmax"], 
-                  ymin = bbox["ymin"], 
-                  ymax = bbox["ymax"]),
-              fill = NA) +
-    coord_sf()+ # Change to Cartesian coordinates
-    theme_void()+
-    labs(title = "Turtle Nesting Locations (in green)")
+# Countried: Cayman Islands, USA, Mexico, Cabo Verde
 
-overview_map
+# Filter to countries in the Caribbean/gulf of mexico and southeast Atlantic. 
+map_turtles_filtered <- turtles %>% 
+    filter(region %in% c("Caribbean and Gulf of Mexico", "Southeast Atlantic")) %>% 
+    # Add a new column so each entry has an assigned bbox
+    rowwise() %>% 
+    mutate(bbox = list(bbox_list[[region]])) %>% 
+    ungroup()
+
+# Make Map -----------------------------------------------------------------------------------------
+caribbean_map <- ggplot() +
+    # add basemap
+  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
     
+    # add nesting layer
+  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
+    
+    
+    # set zoom to gulf of mexico and caribbean
+  coord_sf(xlim = c(-97, -55), ylim = c(9, 33)) + 
+    
+  labs(title = "Turtle Sightings Around the Gulf of Mexico")+
+    
+    # apply a blank theme
+  theme_void()
+
+caribbean_map
 ```
 
 ```{r}
-# NEED HELP HERE
-# Experimental caribbean map
-# Get a world map as an sf object
+# Zoomed in map on USA
+zoom_map_us <- ggplot() +
+    # add basemap
+  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
+    
+    # add nesting layer
+  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
+    
+    
+    # set zoom to gulf of mexico and caribbean
+  coord_sf(xlim = c(-90, -75), ylim = c(25, 35)) + 
+    
+  labs(title = "Turtle Sightings Around the Southeastern USA")+
+    
+    # apply a blank theme
+  theme_void()
+
+zoom_map_us
+```
+
+```{r}
+# Zoomed in map on Cabo Verde
+zoom_map_cv <- ggplot() +
+    # add basemap
+  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
+    
+    # add nesting layer
+  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
+    
+    
+    # set zoom to cabo verde islands 
+  coord_sf(xlim = c(-25, -20), ylim = c(14, 17)) + 
+    
+  labs(title = "Turtle Sightings in Cabo Verde")+
+    
+    # apply a blank theme
+  theme_void()
+
+zoom_map_cv
+```
+
+```{r}
+# Zoomed in map on Eastern Mexico
+zoom_map_mx <- ggplot() +
+    # add basemap
+  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
+    
+    # add nesting layer
+  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
+    
+    
+    # set zoom to cabo verde islands 
+ coord_sf(xlim = c(-88, -87), ylim = c(20, 21)) + 
+    
+  labs(title = "Turtle Sightings in Eastern Mexico")+
+    
+    # apply a blank theme
+  theme_void()
+
+zoom_map_mx
+```
+
+```{r}
+# Zoomed in map on Cayman Islands
+zoom_map_ci <- ggplot() +
+    # add basemap
+  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
+    
+    # add nesting layer
+  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
+    
+    
+    # set zoom to caymen islands 
+  coord_sf(xlim = c(-81.55, -81.15), ylim = c(19.15, 19.75)) + 
+    
+  labs(title = "Turtle Sightings in Caymen Islands")+
+    
+    # apply a blank theme
+  theme_void()
+
+zoom_map_ci
+```
+
+
+
+```{r}
+# Q2: Where are sea turtles nesting in the caribbean and gulf of Mexico ? ------------------------------------------------------------------
+
+# Set bounding boxes for region(s) of interest
+bbox_carib <- st_bbox(c(xmin = -99, ymin = 9, xmax = -55, ymax = 35), crs = st_crs(turtles))
+
+# Save as a dataframe
+bbox_carib_df <- data.frame(xmin = -99, ymin = 9, xmax = -55, ymax = 35)
+                     
+# bbox_seat <- st_bbox(c(xmin = -50, ymin = 0, xmax = 0, ymax = 40), crs = st_crs(turtles))
+
+
+# Save as list for easier access
+bbox_list <- list(  "Caribbean and Gulf of Mexico" = bbox_carib,
+                    "Southeast Atlantic"            = bbox_seat)
+
+# Filter to countries in the Caribbean/gulf of mexico and southeast Atlantic. 
+map_turtles_filtered <- turtles %>% 
+    filter(region %in% c("Caribbean and Gulf of Mexico", "Southeast Atlantic")) %>% 
+    # Add a new column so each entry has an assigned bbox
+    rowwise() %>% 
+    mutate(bbox = list(bbox_list[[region]])) %>% 
+    ungroup()
+
+
+# Get world map data
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
-# Check for any invalid geometries
-st_is_valid(world)
-st_is_valid(turtles)
+# Filter to caribbean region
+caribbean_map <- world %>%
+    st_crop(bbox_carib)
 
-# fix invalid geometries in turtles
-library(lwgeom)
-turtles <- st_make_valid(turtles)
-
-# Convert bbox to an sf polygon
-bbox_carib_sf <- st_as_sfc(bbox_carib)
-
-# Ensure the polygon is valid
-bbox_carib_sf <- st_make_valid(bbox_carib_sf)
-
-bbox_carib_sf <- st_make_valid(bbox_carib)
-
-# bbox is bbox_carib
-caribbean_map <- st_crop(world, bbox_carib)
-
-# Check CRS for both datasets
-st_crs(world) == st_crs(turtles)
-
-
-turtles_in_bbox <- st_crop(turtles, bbox_carib)
-
-
-```
-
-```{r}
-# Experimental caribbean map, caribbean basemap data isn't showing up, need to dig into why, commented out for now.
-
-# Create the ggplot map
+# Create the ggplot map for Caribbean and Gulf of Mexico
 carib_map <- ggplot() +
-    geom_sf(data = caribbean_map, fill = "lightblue") +
-    geom_sf(data = turtles, color = '#438D80', size = 2)+
-    coord_sf(xlim = c(bbox_carib["xmin"], bbox_carib["xmax"]),
-           ylim = c(bbox_carib["ymin"], bbox_carib["ymax"]),
-           expand = FALSE) +
-    labs(title = "Caribbean and Gulf of Mexico",
-       subtitle = "Using rnaturalearth and ggplot2",
-       x = "Longitude", y = "Latitude") +
+    geom_sf(data = caribbean_map, fill = "gray") +
+    geom_sf(data = map_turtles_filtered, color = "green", size = 8
+            )
     theme_minimal()
 
 carib_map
+```
+
+
+```{r}
+# Where are sea turtles nesting in the gulf of mexico and caribbean?
+map <-  ggplot(map_turtles_filtered) +
+
+  # Initialize base rectangles and set opacity based on relative sighting proportions. *changed*----
+  geom_rect(aes(xmin = 0, xmax = 1, ymin = 0, ymax = 1, alpha = opacity_val), 
+           fill = '#438D80') +
+  
+  # Add state abbreviations onto the rectangles ----
+  geom_text(aes(x = 0.5, y = 0.7, label = country), 
+            family = "quicksand", 
+            fontface = "bold",
+            size = 9, 
+            color = "black") +
+  
+  # # Add number of observations per 10k residents onto the rectangles ----
+  # geom_text(aes(x = 0.5, y = 0.3, label = num(pacity_value), 1)), 
+  #           family = "quicksand", 
+  #           fontface = "bold",
+  #           size = 8, 
+  #           color = "black") +  
+
+  # Arrange rectangles in the USA mapping format by location ----
+  geofacet::facet_geo(~country, grid = "world_countries_grid1") +
+    
+    
+    # Add Caribbean bounding box
+  geom_rect(data = bbox_carib_df, 
+            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+            color = "black", fill = NA, size = 1.5)
+    
+    # empty theme
+    theme_void() +
+    
+    # customize theme 
+  theme(
+    strip.text = element_blank(),  # Hide facet labels if needed
+    plot.subtitle = element_text(family = "bar", size = 40, color = "#FF5733", hjust = 1, margin = margin(b = 10)),
+    legend.position = "none"
+  )
+
+  # # Set aspect ratio to be fixed at an equal scale *changed*----
+  # coord_fixed(ratio = 1) +
+  # 
+  # # Add a descriptive subtitle ----
+  # labs(subtitle = "Sightings per 10k population") +
+  # 
+  # # apply a completely empty theme ----
+  # theme_void() +
+  # 
+  # # further customize theme ----
+  # theme(
+  #   
+  #   #  Remove state facet labels. *changed*----
+  #   strip.text = element_blank(),
+  #   
+  #   # Customize subtitle size, color, and margin ----
+  #   plot.subtitle = element_text(family = "bar", 
+  #                                size = 40, 
+  #                                color = accent,
+  #                                hjust = 1,  
+  #                                margin = margin(b = 10)),
+  #   
+  #   # Hide legend from view ----
+  #   legend.position = "none"
+    
+  #)
+
+map
+
 ```
 
 ### Data Viz 3 - Point and Line Chart
@@ -272,7 +403,7 @@ turtles$image <- ifelse(duplicated(turtles$mann_kendal), NA, turtle_hatch)
 
 # Filter for mann-kendall plot
 mann_kendall_turtles = turtles %>% 
-    filter(region %in% c('Caribbean and Gulf of Mexico', 'Southeast Atlantic'))
+    filter(region %in% c('Caribbean and Gulf of Mexico'))
 
 ```
 
