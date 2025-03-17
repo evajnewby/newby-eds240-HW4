@@ -32,7 +32,8 @@ library(ggimage)
 library(viridis)
 library(viridisLite)
 library(showtext)
-library(geofacet)
+library(ggforce)
+library(grid)
 ```
 
 ### Read in Turtle Nesting Data and Font Data
@@ -47,9 +48,7 @@ turtles <- st_read(shapefile_path) %>%
     janitor::clean_names()
 
 # Font options from google
-font_add_google("Lora", "lora") 
 font_add_google("Quicksand", "quicksand") 
-font_add_google("Gochi Hand", "gochi")
 showtext_auto()
 ```
 
@@ -83,24 +82,24 @@ region_counts <- turtles %>%
 # Join back to original data (so each region has its unique opacity)
 turtles <- turtles %>%
     left_join(region_counts, by = "region")
+
 ```
 
 
 ```{r}
 # Q2: World regions represented and their average nest count per year. ------------------------------------------------------------------------------- 
-# per region
 
 turtle_bar_plot <- turtles %>% 
     
     ggplot(aes(x = fct_rev(fct_infreq(region)),
                alpha = opacity_val))+
     
-    geom_bar(fill = '#438D80')+
+    geom_bar(fill = "#EBD7A4") +
     
     geom_text(stat = 'count', 
               aes(label=after_stat(count)),
               hjust = 2,
-              size = 8,
+              size = 12,
               color = "black",
               family = 'quicksand',
               fontface = "bold")+
@@ -108,16 +107,15 @@ turtle_bar_plot <- turtles %>%
     coord_flip()+
     
     geom_text(aes(x = region, y = 0, label = str_to_title(region)), 
-             # family = 'gochi',
              family = "quicksand",
-            #fontface = "bold",
-            size = 7, 
+            size = 13, 
             hjust = -0.03,
             nudge_y = 0.2) +
     
     labs(x = " ",
-         y = "Number of Nests",
-         title = " Average Loggerhead Turtle Nesting Counts ... (per year 1979 - 2023)")+
+         y = " ",
+         title = "Where are Loggerheads Nesting?",
+         subtitle = " Average Loggerhead Nesting Counts (per year 1979 - 2023)")+
     
     theme_void()+
     
@@ -125,13 +123,16 @@ turtle_bar_plot <- turtles %>%
         # text font
         text = element_text(family = "quicksand"),
         panel.grid.major.y = element_blank(),
-        # axis.text.y = element_text(size = 10),
-        plot.title = element_text(hjust = 0.5),
+        
+        # adjust text size in plot
+        plot.title = element_text(face = "bold", color = "white", size = 40, hjust = 0.5),
+        plot.subtitle = element_text(face = "bold", size = 28, color = "white", hjust = 0.5),
+        axis.text = element_text(size = 20),
 
-        # Sand colored background:
-        panel.background = element_rect(fill = "#F4E7C5", color = NA),
-        plot.background = element_rect(fill = "#F4E7C5", color = NA),
-        legend.background = element_rect(fill = "#F4E7C5", color = NA),
+        # Ocean colored background:
+        panel.background = element_rect(fill = "#28808C", color = NA),
+        plot.background = element_rect(fill = "#28808C", color = NA),
+        legend.background = element_rect(fill = "#28808C", color = NA),
         
         # Remove x and y axis labels
         axis.text.x = element_blank(), 
@@ -140,339 +141,150 @@ turtle_bar_plot <- turtles %>%
         axis.ticks.y = element_blank(), 
     ) +
     guides(alpha = "none")
-        
 
-turtle_bar_plot   
+
 ```
 
 ### Data Viz 2 - World Map
 Countries in the caribbean/gulf of mexico  and Southeast Atlantic - HIGHLIGHT 
-opacity value for nesting sites. general patterns by country
-3 separate maps (top2 locations from bar chart)
-or just caribbean
-
-# Backup - what countries make up the caribbean/gulf of Mexico?
-
-
-# This is the one!
 
 ```{r}
-# Q2: Where are sea turtles nesting in the caribbean and gulf of Mexico ? ------------------------------------------------------------------
+# Q2: Where are sea turtles nesting in the Caribbean and Gulf of Mexico?
 
-# Countried: Cayman Islands, USA, Mexico, Cabo Verde
-
-# Filter to countries in the Caribbean/gulf of mexico and southeast Atlantic. 
+# Filter to countries in the Caribbean/gulf of Mexico.
 map_turtles_filtered <- turtles %>% 
-    filter(region %in% c("Caribbean and Gulf of Mexico", "Southeast Atlantic")) %>% 
-    # Add a new column so each entry has an assigned bbox
-    rowwise() %>% 
-    mutate(bbox = list(bbox_list[[region]])) %>% 
-    ungroup()
+    filter(region %in% c("Caribbean and Gulf of Mexico"))
+
+# Get world basemap
+world <- ne_countries(returnclass = "sf")
+
+# Function to draw a circle for cropping onto the info graphic
+# circle_crop <- function(plot) {
+#     grid.newpage()  # Open a new graphical window
+#     pushViewport(viewport(width = 1, height = 1, clip = "on"))
+#   
+#     # Draw the plot
+#     print(plot, newpage = FALSE)
+#   
+#     # Create a circular mask
+#     grid.circle(r = 0.5, gp = gpar(fill = NA, col = "white", lwd = 5)) 
+# }
 
 # Make Map -----------------------------------------------------------------------------------------
 caribbean_map <- ggplot() +
-    # add basemap
-  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
+    # Add basemap
+    geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
     
-    # add nesting layer
-  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
+    # Add nesting layer
+    geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
     
+    # Set zoom to Gulf of Mexico and Caribbean
+    coord_sf(xlim = c(-100, -55), ylim = c(9, 33)) + 
     
-    # set zoom to gulf of mexico and caribbean
-  coord_sf(xlim = c(-97, -55), ylim = c(9, 33)) + 
+    # Add title and subtitle
+    labs(title = "Loggerhead Nesting Locations",
+         subtitle = "Caribbean and Gulf of Mexico") +
     
-  labs(title = "Turtle Sightings Around the Gulf of Mexico")+
-    
-    # apply a blank theme
-  theme_void()
-
-caribbean_map
-```
-
-```{r}
-# Zoomed in map on USA
-zoom_map_us <- ggplot() +
-    # add basemap
-  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
-    
-    # add nesting layer
-  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
-    
-    
-    # set zoom to gulf of mexico and caribbean
-  coord_sf(xlim = c(-90, -75), ylim = c(25, 35)) + 
-    
-  labs(title = "Turtle Sightings Around the Southeastern USA")+
-    
-    # apply a blank theme
-  theme_void()
-
-zoom_map_us
-```
-
-```{r}
-# Zoomed in map on Cabo Verde
-zoom_map_cv <- ggplot() +
-    # add basemap
-  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
-    
-    # add nesting layer
-  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
-    
-    
-    # set zoom to cabo verde islands 
-  coord_sf(xlim = c(-25, -20), ylim = c(14, 17)) + 
-    
-  labs(title = "Turtle Sightings in Cabo Verde")+
-    
-    # apply a blank theme
-  theme_void()
-
-zoom_map_cv
-```
-
-```{r}
-# Zoomed in map on Eastern Mexico
-zoom_map_mx <- ggplot() +
-    # add basemap
-  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
-    
-    # add nesting layer
-  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
-    
-    
-    # set zoom to cabo verde islands 
- coord_sf(xlim = c(-88, -87), ylim = c(20, 21)) + 
-    
-  labs(title = "Turtle Sightings in Eastern Mexico")+
-    
-    # apply a blank theme
-  theme_void()
-
-zoom_map_mx
-```
-
-```{r}
-# Zoomed in map on Cayman Islands
-zoom_map_ci <- ggplot() +
-    # add basemap
-  geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
-    
-    # add nesting layer
-  geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
-    
-    
-    # set zoom to caymen islands 
-  coord_sf(xlim = c(-81.55, -81.15), ylim = c(19.15, 19.75)) + 
-    
-  labs(title = "Turtle Sightings in Caymen Islands")+
-    
-    # apply a blank theme
-  theme_void()
-
-zoom_map_ci
-```
-
-
-
-```{r}
-# Q2: Where are sea turtles nesting in the caribbean and gulf of Mexico ? ------------------------------------------------------------------
-
-# Set bounding boxes for region(s) of interest
-bbox_carib <- st_bbox(c(xmin = -99, ymin = 9, xmax = -55, ymax = 35), crs = st_crs(turtles))
-
-# Save as a dataframe
-bbox_carib_df <- data.frame(xmin = -99, ymin = 9, xmax = -55, ymax = 35)
-                     
-# bbox_seat <- st_bbox(c(xmin = -50, ymin = 0, xmax = 0, ymax = 40), crs = st_crs(turtles))
-
-
-# Save as list for easier access
-bbox_list <- list(  "Caribbean and Gulf of Mexico" = bbox_carib,
-                    "Southeast Atlantic"            = bbox_seat)
-
-# Filter to countries in the Caribbean/gulf of mexico and southeast Atlantic. 
-map_turtles_filtered <- turtles %>% 
-    filter(region %in% c("Caribbean and Gulf of Mexico", "Southeast Atlantic")) %>% 
-    # Add a new column so each entry has an assigned bbox
-    rowwise() %>% 
-    mutate(bbox = list(bbox_list[[region]])) %>% 
-    ungroup()
-
-
-# Get world map data
-world <- ne_countries(scale = "medium", returnclass = "sf")
-
-# Filter to caribbean region
-caribbean_map <- world %>%
-    st_crop(bbox_carib)
-
-# Create the ggplot map for Caribbean and Gulf of Mexico
-carib_map <- ggplot() +
-    geom_sf(data = caribbean_map, fill = "gray") +
-    geom_sf(data = map_turtles_filtered, color = "green", size = 8
-            )
-    theme_minimal()
-
-carib_map
-```
-
-
-```{r}
-# Where are sea turtles nesting in the gulf of mexico and caribbean?
-map <-  ggplot(map_turtles_filtered) +
-
-  # Initialize base rectangles and set opacity based on relative sighting proportions. *changed*----
-  geom_rect(aes(xmin = 0, xmax = 1, ymin = 0, ymax = 1, alpha = opacity_val), 
-           fill = '#438D80') +
-  
-  # Add state abbreviations onto the rectangles ----
-  geom_text(aes(x = 0.5, y = 0.7, label = country), 
-            family = "quicksand", 
-            fontface = "bold",
-            size = 9, 
-            color = "black") +
-  
-  # # Add number of observations per 10k residents onto the rectangles ----
-  # geom_text(aes(x = 0.5, y = 0.3, label = num(pacity_value), 1)), 
-  #           family = "quicksand", 
-  #           fontface = "bold",
-  #           size = 8, 
-  #           color = "black") +  
-
-  # Arrange rectangles in the USA mapping format by location ----
-  geofacet::facet_geo(~country, grid = "world_countries_grid1") +
-    
-    
-    # Add Caribbean bounding box
-  geom_rect(data = bbox_carib_df, 
-            aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-            color = "black", fill = NA, size = 1.5)
-    
-    # empty theme
+    # Apply a blank theme
     theme_void() +
     
-    # customize theme 
-  theme(
-    strip.text = element_blank(),  # Hide facet labels if needed
-    plot.subtitle = element_text(family = "bar", size = 40, color = "#FF5733", hjust = 1, margin = margin(b = 10)),
-    legend.position = "none"
-  )
+    theme(
+        # Specify fonts and sizes
+        plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+        plot.subtitle = element_text(size = 16, hjust = 0.5)
+    )
 
-  # # Set aspect ratio to be fixed at an equal scale *changed*----
-  # coord_fixed(ratio = 1) +
-  # 
-  # # Add a descriptive subtitle ----
-  # labs(subtitle = "Sightings per 10k population") +
-  # 
-  # # apply a completely empty theme ----
-  # theme_void() +
-  # 
-  # # further customize theme ----
-  # theme(
-  #   
-  #   #  Remove state facet labels. *changed*----
-  #   strip.text = element_blank(),
-  #   
-  #   # Customize subtitle size, color, and margin ----
-  #   plot.subtitle = element_text(family = "bar", 
-  #                                size = 40, 
-  #                                color = accent,
-  #                                hjust = 1,  
-  #                                margin = margin(b = 10)),
-  #   
-  #   # Hide legend from view ----
-  #   legend.position = "none"
-    
-  #)
+# # Apply circular clipping to the map
+# circle_crop(caribbean_map)
 
-map
+# Save as PNG
+png("circular_turtle_map.png", width = 1000, height = 1000, res = 300)
+#circle_crop(caribbean_map)
+dev.off()
 
 ```
 
+
 ### Data Viz 3 - Point and Line Chart
-add in context/annotations
-remove title
 
 ```{r}
 # Add turtle icon
 turtle_hatch <- "turtle-hatch.png"
 
 # add turtle icon to each column that has a unique mann-kendall score value per country
-turtles$image <- ifelse(duplicated(turtles$mann_kendal), NA, turtle_hatch)
-
-# Filter for mann-kendall plot
-mann_kendall_turtles = turtles %>% 
-    filter(region %in% c('Caribbean and Gulf of Mexico'))
+map_turtles_filtered$image <- ifelse(duplicated(map_turtles_filtered$mann_kendal), NA, turtle_hatch)
 
 ```
 
 ```{r}
-# Just caribbean and gulf of mexico.
-# Q3: Which regions that have nests have the highest variation in their mann-kendal slopes? ------------------------------------------------------
+# Q3: what is the variation in the mann-kendall slopes in the caribbean/gulf of mexico? ------------------------------------------------------
 
-#  Mann-kendall plot per region
-
-mann_kendall_plot <- mann_kendall_turtles %>%
+mann_kendall_plot <- map_turtles_filtered %>%
     
   ggplot(aes(x = mann_kendal, 
-             y = fct_rev(fct_infreq(region)))) +
+             y = region)) +
     
   geom_line(aes(color = mann_kendal), 
             size = 4) +  
     
     # Use ggimage for turtle icons
-  geom_image(aes(image = image), size = 0.06)+
+  geom_image(aes(image = image), size = 0.13) +
     
     # Gradient color and gradient color legend
   scale_color_gradient2(low = "green", 
                         mid = "lightblue", 
                         high = "#438D80", 
-                        midpoint = 0,
+                        midpoint = 0.25,
                         guide = guide_colorbar(title = NULL,
-                                               barwidth = 23,
+                                               barwidth = 21,
                                                barheight = 0.5),
-                        breaks = c(-0.5, 0, 0.5),
+                        breaks = c(-0.17, 0, 0.5),
                         labels = c("Decrease", "No Change", "Increase")) + 
     
-    # "No change" h line
-  geom_vline(xintercept = 0, 
-             color = "black", 
-             linetype = "dashed", 
-             size = 0.8, 
-             alpha = 0.5)+
-  annotate("text", x = max(turtles$mann_kendal), 
-           y = 0, 
-           label = "No Change", 
-           hjust = -1, 
-           vjust = -30, # adjust this to move text
-           angle = 90, 
-           color = "black", 
-           size = 3) +
-    
     # label axes
-  labs(x = "Change in Loggerhead Turtle Nesting Over Time (Mann-Kendall Slope)",
-       y = "") +
+  labs(x = "Mann-Kendall Slope",
+       y = "",
+       title = "Change in Loggerhead Nesting Frequency Over Time",
+       subtitle = "At Beaches in the Caribbean and Gulf of Mexico Region") +
+    
   theme_minimal() +
+    
   theme(legend.position = "bottom",
         # text font
         text = element_text(family = "quicksand"),
         
         # Sand colored background:
-        panel.background = element_rect(fill = "#F4E7C5", color = NA),
-        plot.background = element_rect(fill = "#F4E7C5", color = NA),
-        legend.background = element_rect(fill = "#F4E7C5", color = NA),
+        panel.background = element_rect(fill = "#EBD7A4", color = NA),
+        plot.background = element_rect(fill = "#EBD7A4", color = NA),
+        legend.background = element_rect(fill = "#EBD7A4", color = NA),
         
-       # plot.title = element_text(face = "bold", size = 14),
-        axis.text = element_text(size = 12),
-        legend.text = element_text(size = 10),
+        # adjust text size in plot
+        plot.title = element_text(face = "bold", size = 36, hjust = 0.5),
+        plot.subtitle = element_text(size = 30, hjust = 0.5),
+        axis.title.x = element_text(size = 20),
+        axis.text = element_text(size = 20),
+        legend.text = element_text(size = 20),
         
-        # add dot/ turtle icon in the legend
+        # Hide labels
+        axis.text.y = element_blank(),  # Hides y-axis labels
+        axis.ticks.y = element_blank(),  # Hides y-axis ticks (optional)
         
-        
-        # increase plot margin on the right side
-        plot.margin = margin(t = 10, r = 100, b = 10, l = 10)
     ) 
 
-mann_kendall_plot
 ```
+
+
+# Save all plots as .png
+
+```{r}
+# Bar plot save
+ggsave("turtle_barplot.png", plot = turtle_bar_plot, width = 5, height = 3)
+
+# Map save
+#ggsave("turtle_map.png", plot = caribbean_map, width = 5, height = 3)
+
+# Line plot save
+ggsave("turtle_lineplot.png", plot = mann_kendall_plot, width = 5, height = 3)
+
+```
+

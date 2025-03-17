@@ -1,7 +1,7 @@
 ---
 title: "HW 3 - Turtles"
 subtitle: "Part 3 - Drafting Viz"
-description: "Due Tue 02/25/2025"
+description: "Due Tue 02/25/2025 - used token to extend due date to 2/26" 
 author: "Eva Newby"
 toc: true
 warning: false
@@ -30,29 +30,34 @@ library(rnaturalearthdata)
 
 ## Question 1: Which option Do you plan to pursue?
 
-       I still plan to pursue option 1. I still like the idea of creating three different visualizations that will all work together towards one message or theme.
+I still plan to pursue option 1. I still like the idea of creating three different visualizations that will all work together towards one message or theme.
 
 
 ## Question 2: Re-state your questions - has this changed at all since HW 1?
 
-    What is the change in Loggerhead sea turtle nesting trends by world region? The original question was: What is the relationship between temperature trends and loggerhead turtle nesting activity over the past four decades? I needed to edit this question, as raw year and ocean temperature data was not provided in the dataset, and so I am pivoting to a broader question. My hope is that viewers see the viz's and ask question as to why there is change. 
+What is the change in Loggerhead sea turtle nesting trends by world region? The original question was: What is the relationship between temperature trends and loggerhead turtle nesting activity over the past four decades? I needed to edit this question, as raw year and ocean temperature data was not provided in the dataset, and so I am pivoting to a broader question. My hope is that viewers see the viz's and ask question as to why there is change. 
     
 
 ## Question 3: Explain which variables from your dataset(s) you will use to answer your question - and how.
 
-    Mann-Kendall: This number quantifies how much change in loggerhead turtle nesting (increase or decrease) a beach or region experienced. Zero = no change, below zero = a decrease in nesting, above zero = an increase in nesting. 
-    rmu and country: Regional Management Unit, this number was used to assign countries to regions. I created a regions column from the data from the rmu and country column.
-    GEOMETRY: Shapefile geometry for each beach/stretch of beach where nests were found. 
+Mann-Kendall: This number quantifies how much change in loggerhead turtle nesting (increase or decrease) a beach or region experienced. Zero = no change, below zero = a decrease in nesting, above zero = an increase in nesting. 
+
+rmu and country: Regional Management Unit, this number was used to assign countries to regions. I created a regions column from the data from the rmu and country column.
+
+GEOMETRY: Shapefile geometry for each beach/stretch of beach where nests were found. 
 
 ## Question 4: Find at least two data visualizations that you could (potentially) borrow / adapt pieces from. Link to them or download and embed them into your .qmd file, and explain which elements you might borrow (e.g. the graphic form, legend design, layout, etc.).
 
 ![](turtleviz1.jpeg)
-    What I like: I want to re-create the zoomed in map on the regions specified in the paper (eg: south pacific, caribbean, etc.) I also find the colors to be very intuitive.  
+    
+    
+What I like: I want to re-create the zoomed in map on the regions specified in the paper (eg: south pacific, Caribbean, etc.) I also find the colors to be very intuitive.  
 
 
 
 ![](turtleviz2.jpeg)
-    What I like: I like this graphic form and the order of the visualizations. I'd like to do something similar with the background being the ocean. I alsdo like the line chart, but I do feel that this viz is displaying too many things in one picture. 
+   
+What I like: I like this graphic form and the order of the visualizations. I'd like to do something similar with the background being the ocean. I also like the line chart, but I do feel that this viz is displaying too many things in one picture. 
     
 ## Question 5: Hand-draw your anticipated visualizations.
 
@@ -63,8 +68,10 @@ library(rnaturalearthdata)
 #| out-width: "100%"
 #| fig-alt: "Alt text here"
 
-
-# knitr::include_graphics("path/to/image")
+# Include the image in Quarto
+knitr::include_graphics("viz1.png")
+knitr::include_graphics("viz2.png")
+knitr::include_graphics("viz3.png")
 ```
 
 ## Question 6: Mock-up of hand-drawn visualizations
@@ -174,33 +181,43 @@ overview_map
 # NEED HELP HERE
 # Experimental caribbean map
 # Get a world map as an sf object
-world <- ne_countries(scale = "medium", returnclass = "sf")
+# world <- ne_countries(scale = "medium", returnclass = "sf")
+# 
+# # Check for any invalid geometries
+# st_is_valid(world)
+# st_is_valid(turtles)
+# 
+# # fix invalid geometries in turtles
+# library(lwgeom)
+# turtles <- st_make_valid(turtles)
+# 
+# # Convert bbox to an sf polygon
+# bbox_carib_sf <- st_as_sfc(bbox_carib)
+# 
+# # Ensure the polygon is valid
+# bbox_carib_sf <- st_make_valid(bbox_carib_sf)
+# 
+# bbox_carib_sf <- st_make_valid(bbox_carib)
+# 
+# # bbox is bbox_carib
+# caribbean_map <- st_crop(world, bbox_carib)
+# 
+# # Check CRS for both datasets
+# st_crs(world) == st_crs(turtles)
+# 
+# 
+# turtles_in_bbox <- st_crop(turtles, bbox_carib)
 
-# bbox is bbox_carib
-caribbean_map <- st_crop(world, bbox_carib)
-
-# Check CRS for both datasets
-st_crs(world) == st_crs(turtles)
-
-
-turtles_in_bbox <- st_crop(turtles, bbox_carib)
-
-# Check if there are any points left
-nrow(turtles_in_bbox)
-
-# fix invalid geometries
-library(lwgeom)
-turtles <- st_make_valid(turtles)
 
 ```
 
 ```{r}
-# Experimental caribbean map
+# Experimental caribbean map, caribbean basemap data isn't showing up, need to dig into why, commented out for now.
 
 # Create the ggplot map
 carib_map <- ggplot() +
     geom_sf(data = turtles, color = '#438D80', size = 2)+
-    geom_sf(data = caribbean_map, fill = "lightblue") +
+    #geom_sf(data = caribbean_map, fill = "lightblue") +
     coord_sf(xlim = c(bbox_carib["xmin"], bbox_carib["xmax"]),
            ylim = c(bbox_carib["ymin"], bbox_carib["ymax"]),
            expand = FALSE) +
@@ -218,24 +235,23 @@ carib_map
 # Q2: Countries represented and their average nest count per year. ------------------------------------------------------------------------------- 
 
 # Bar chart of countries represented, double check that this number is an average.
-turtles %>% 
-    ggplot(aes(x = fct_rev(fct_infreq(country)), 
-               na.rm = TRUE))+
-    geom_bar(fill = '#438D80')+
-    geom_text(stat = 'count', 
-              aes(label=after_stat(count)),
-              hjust = -0.1,
-              size = 4)+
-    coord_flip()+
-    labs(x = "",
-         y = "Number of Nests",
-         title = " Average Loggerhead Turtle Nesting Count by Country (per year 1979 - 2023)")+
-    theme_minimal()+
-    theme(
-        panel.grid.major.y = element_blank(),
-         axis.text.y = element_text(size = 10),
-        plot.title = element_text(hjust = 0.5)
-        )
+# turtles %>% 
+#     ggplot(aes(x = fct_rev(fct_infreq(country)), 
+#                na.rm = TRUE))+
+#     geom_bar(fill = '#438D80')+
+#     geom_text(stat = 'count', 
+#               aes(label=after_stat(count)),
+#               hjust = -0.1,
+#               size = 4)+
+#     coord_flip()+
+#     labs(x = "",
+#          y = "Number of Nests",
+#          title = " Average Loggerhead Turtle Nesting Count by Country (per year 1979 - 2023)")+
+#     theme_minimal()+
+#     theme(
+#         panel.grid.major.y = element_blank(),
+#          axis.text.y = element_text(size = 10),
+#         plot.title = element_text(hjust = 0.5))
 
 # per region
 turtles %>% 
@@ -347,18 +363,21 @@ turtles %>%
 
 ## Question 7a: What challenges did you encounter or anticipate encountering as you continue to build / iterate on your visualizations in R? If you struggled with mocking up any of your three visualizations (from #6, above), describe those challenges here.
 
-    Viz 1: I didn't anticipate as many issues with defining the bboxes for viz 1. Going through by hand to define them all is a bit of a pian, so I'm all ears to finding an easier way to do this. Additionally, some of my data keeps disappearing so I am actively troubleshooting that. 
-    Viz 2: It feels a little boring, so I'm excited to add more thematic elements to make it a bit more fun looking. 
-    Viz 3: It is a challenge to define what the mann-kendall slope is in easy terms for this project. I so badly wish the dataset included years and ocean temperatures, but all of that data is included in the mann-kendall calculation (the code for the calculation was not provided to me). I do think that it is interesting to see the mann-kendall slope change and I am very open to feedback for how to make this easier to understand. 
+Viz 1: I didn't anticipate as many issues with defining the bboxes for viz 1. Going through by hand to define them all is a bit of a pain, so I'm all ears to finding an easier way to do this. Additionally, some of my turtle data and basemaps keeps disappearing so I am actively troubleshooting that. 
+
+Viz 2: It feels a little boring, so I'm excited to add more thematic elements to make it a bit more fun looking. 
+
+Viz 3: It is a challenge to define what the mann-kendall slope is in easy terms for this project. I so badly wish the dataset included years and ocean temperatures, but all of that data is included in the mann-kendall calculation (the code for the calculation was not provided to me). I do think that it is interesting to see the mann-kendall slope change and I am very open to feedback for how to make this easier to understand. 
 
 ## Question 7b: What ggplot extension tools / packages do you need to use to build your visualizations? Are there any that we haven’t covered in class that you’ll be learning how to use for your visualizations?
     
-    I'd like to explore more world map package options from ggplot and sf. There's a lot of cool ways to display geospatial data and I want to explore that more. One package I might use is the `geofacet` package. I'm very open to suggestions on this. 
+I'd like to explore more world map package options from ggplot and sf. There's a lot of cool ways to display geospatial data and I want to explore that more. One package I might use is the `geofacet` package. I'm very open to suggestions on this. 
 
 ## Question 7c: What feedback do you need from the instructional team and / or your peers to ensure that your intended message is clear?
 
-    Something I was considering is: should I mock up my visualizations by country or by region? Feedback from my learning partners in discussion convinced me to do it by region instead of by country, but I'm keeping the code here just incase (commented it out). I included more areas I'd like to receive feedback in question 7a.
+Something I was considering is: should I mock up my visualizations by country or by region? Feedback from my learning partners in discussion convinced me to do it by region instead of by country, but I'm keeping the code here just incase (commented it out). I included more areas I'd like to receive feedback in question 7a.
 
 ## Citation:
 
-'Sousa-Guedes, Diana; Campos, João C.; Bessa, Filipa et al. (2025). The effects of warming on loggerhead turtle nesting counts \[Dataset\]. Dryad. https://doi.org/10.5061/dryad.b8gtht7n5'
+[Sousa-Guedes, Diana; Campos, João C.; Bessa, Filipa et al. (2025). The effects of warming on loggerhead turtle nesting counts [Dataset]. Dryad.](https://doi.org/10.5061/dryad.b8gtht7n5)
+
