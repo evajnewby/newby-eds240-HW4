@@ -19,26 +19,20 @@ editor_options:
 ```{r}
 # Load libraries
 library(tidyverse)
-library(here)
 library(dplyr)
-library(ggplot2)
 library(sf)
 library(ggspatial)
-library(prettymapr)
 library(rnaturalearth)
 library(rnaturalearthdata)
-library(forcats)
 library(ggimage)
-library(viridis)
-library(viridisLite)
 library(showtext)
-library(ggforce)
 library(grid)
 ```
 
 ### Read in Turtle Nesting Data and Font Data
 
 ```{r}
+# Read in Turtle nesting data and font data ----------------------
 # Set the SHAPE_RESTORE_SHX config option
 Sys.setenv("SHAPE_RESTORE_SHX" = "YES")
 
@@ -146,62 +140,37 @@ turtle_bar_plot <- turtles %>%
 ```
 
 ### Data Viz 2 - World Map
-Countries in the caribbean/gulf of mexico  and Southeast Atlantic - HIGHLIGHT 
-
+Countries in the caribbean/gulf of mexico  and Southeast Atlantic
 ```{r}
-# Q2: Where are sea turtles nesting in the Caribbean and Gulf of Mexico?
-
 # Filter to countries in the Caribbean/gulf of Mexico.
 map_turtles_filtered <- turtles %>% 
     filter(region %in% c("Caribbean and Gulf of Mexico"))
 
 # Get world basemap
-world <- ne_countries(returnclass = "sf")
+world <- ne_countries(scale = "medium", returnclass = "sf")
+```
 
-# Function to draw a circle for cropping onto the info graphic
-# circle_crop <- function(plot) {
-#     grid.newpage()  # Open a new graphical window
-#     pushViewport(viewport(width = 1, height = 1, clip = "on"))
-#   
-#     # Draw the plot
-#     print(plot, newpage = FALSE)
-#   
-#     # Create a circular mask
-#     grid.circle(r = 0.5, gp = gpar(fill = NA, col = "white", lwd = 5)) 
-# }
+```{r}
+# Q2: Where are sea turtles nesting in the Caribbean and Gulf of Mexico?
 
 # Make Map -----------------------------------------------------------------------------------------
 caribbean_map <- ggplot() +
-    # Add basemap
-    geom_sf(data = world, fill = "#E6ECF1", color = "#E6ECF1") + 
+    # Add detailed basemap
+    geom_sf(data = world, fill = "#EBD7A4", color = "#EBD7A4") + 
     
     # Add nesting layer
-    geom_sf(data = map_turtles_filtered, fill = "#438D80", color = "#438D80") + 
+    geom_sf(data = map_turtles_filtered, fill = "#F50C0C", color = "#F50C0C", lwd = 2) + 
     
     # Set zoom to Gulf of Mexico and Caribbean
-    coord_sf(xlim = c(-100, -55), ylim = c(9, 33)) + 
-    
-    # Add title and subtitle
-    labs(title = "Loggerhead Nesting Locations",
-         subtitle = "Caribbean and Gulf of Mexico") +
+    coord_sf(xlim = c(-100, -65), ylim = c(15, 33)) + 
     
     # Apply a blank theme
     theme_void() +
     
-    theme(
-        # Specify fonts and sizes
-        plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
-        plot.subtitle = element_text(size = 16, hjust = 0.5)
+      theme(
+         # change background ocean color
+         panel.background = element_rect(fill = "#28808c", color = NA)
     )
-
-# # Apply circular clipping to the map
-# circle_crop(caribbean_map)
-
-# Save as PNG
-png("circular_turtle_map.png", width = 1000, height = 1000, res = 300)
-#circle_crop(caribbean_map)
-dev.off()
-
 ```
 
 
@@ -244,8 +213,8 @@ mann_kendall_plot <- map_turtles_filtered %>%
     # label axes
   labs(x = "Mann-Kendall Slope",
        y = "",
-       title = "Change in Loggerhead Nesting Frequency Over Time",
-       subtitle = "At Beaches in the Caribbean and Gulf of Mexico Region") +
+       title = "There's Variation Across Beaches in the Caribbean and Gulf of Mexico",
+       subtitle = "What does this variation mean? Some beaches may handle the effects of climate change better than others") +
     
   theme_minimal() +
     
@@ -267,9 +236,12 @@ mann_kendall_plot <- map_turtles_filtered %>%
         
         # Hide labels
         axis.text.y = element_blank(),  # Hides y-axis labels
-        axis.ticks.y = element_blank(),  # Hides y-axis ticks (optional)
-        
+        axis.ticks.y = element_blank(),  # Hides y-axis ticks
+        panel.grid.minor = element_blank() # remove minor grid lines
     ) 
+
+
+mann_kendall_plot
 
 ```
 
@@ -278,10 +250,11 @@ mann_kendall_plot <- map_turtles_filtered %>%
 
 ```{r}
 # Bar plot save
-ggsave("turtle_barplot.png", plot = turtle_bar_plot, width = 5, height = 3)
+# ggsave("turtle_barplot.png", plot = turtle_bar_plot, width = 5, height = 3)
 
 # Map save
-#ggsave("turtle_map.png", plot = caribbean_map, width = 5, height = 3)
+# ggsave("caribbean_turtle_map.png", plot = caribbean_map, 
+       #width = 12, height = 10, dpi = 300, units = "in")
 
 # Line plot save
 ggsave("turtle_lineplot.png", plot = mann_kendall_plot, width = 5, height = 3)
